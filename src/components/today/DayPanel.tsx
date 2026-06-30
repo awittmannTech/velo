@@ -67,23 +67,21 @@ export function DayPanel({
               briefLine(brief)
             ) : !hasThreads ? (
               <span className="text-text-tertiary">No new mail today — enjoy the quiet. 🌤️</span>
-            ) : null}
+            ) : (
+              <span className="text-text-tertiary">You're all caught up — nothing needs a reply.</span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* To respond */}
-      <div className="mt-4">
-        <div className="flex items-center gap-2 mb-1.5">
-          <CornerUpLeft size={14} className="text-accent" />
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">To respond</h3>
-          {toRespond.length > 0 && (
+      {/* To respond (hidden when nothing needs a reply — the brief line says so) */}
+      {toRespond.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <CornerUpLeft size={14} className="text-accent" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">To respond</h3>
             <span className="text-xs text-text-tertiary bg-bg-tertiary px-2 py-0.5 rounded-full">{toRespond.length}</span>
-          )}
-        </div>
-        {toRespond.length === 0 ? (
-          <p className="text-sm text-text-tertiary px-2.5 py-1">Nothing needs your reply right now. ✅</p>
-        ) : (
+          </div>
           <ul className="space-y-1">
             {toRespond.map((t) => (
               <ThreadRow
@@ -95,8 +93,8 @@ export function DayPanel({
               />
             ))}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* FYI · alerts & updates (collapsible) */}
       {fyi.length > 0 && (

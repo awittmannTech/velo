@@ -396,14 +396,16 @@ export async function buildTodayDigest(
   let suggestionsError: string | null = null;
 
   if (aiAvailable) {
-    const hash = digestContentHash(threads);
+    // The brief summarizes the action items only (who needs you), so it never
+    // just re-narrates the FYI list.
+    const briefHash = digestContentHash(needsReply);
     const [threadIdsWithTasks, dismissed] = await Promise.all([
       getThreadIdsWithTasks(accountId),
       getDismissedSuggestionThreadIds(accountId),
     ]);
     const candidates = selectSuggestionCandidates(threads, accountEmail, threadIdsWithTasks, dismissed);
 
-    const briefResult = await buildBrief(accountId, threads, hash, forceAi);
+    const briefResult = await buildBrief(accountId, needsReply, briefHash, forceAi);
     brief = briefResult.brief;
     briefError = briefResult.error;
 
