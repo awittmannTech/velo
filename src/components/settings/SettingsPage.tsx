@@ -119,6 +119,39 @@ export function SettingsPage() {
   const [copilotApiKey, setCopilotApiKey] = useState("");
   const [ollamaServerUrl, setOllamaServerUrl] = useState("http://localhost:11434");
   const [ollamaModel, setOllamaModel] = useState("llama3.2");
+  const [ollamaApiKey, setOllamaApiKey] = useState("");
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaModelsLoading, setOllamaModelsLoading] = useState(false);
+  const [ollamaModelsError, setOllamaModelsError] = useState<string | null>(null);
+  const [ollamaManualModel, setOllamaManualModel] = useState(false);
+
+  const loadOllamaModels = async () => {
+    setOllamaModelsLoading(true);
+    setOllamaModelsError(null);
+    try {
+      const { listOllamaModels } = await import("@/services/ai/providers/ollamaProvider");
+      const models = await listOllamaModels(ollamaServerUrl.trim(), ollamaApiKey.trim() || undefined);
+      setOllamaModels(models);
+      if (models.length === 0) {
+        setOllamaModelsError("No models found on this server.");
+      } else {
+        setOllamaManualModel(false);
+        if (!models.includes(ollamaModel.trim())) setOllamaModel(models[0]!);
+      }
+    } catch (err) {
+      const rawCause = (err as { cause?: unknown })?.cause;
+      const cause = rawCause
+        ? ` (${String((rawCause as { message?: unknown })?.message ?? rawCause)})`
+        : "";
+      console.error("[Velo] Load models failed:", err, "cause:", rawCause);
+      setOllamaModels([]);
+      setOllamaModelsError(
+        `Couldn't load models: ${err instanceof Error ? err.message : String(err)}${cause}. Enter the name manually.`,
+      );
+    } finally {
+      setOllamaModelsLoading(false);
+    }
+  };
   const [claudeModel, setClaudeModel] = useState("claude-haiku-4-5-20251001");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini");
   const [geminiModel, setGeminiModel] = useState("gemini-2.5-flash-preview-05-20");
@@ -179,6 +212,8 @@ export function SettingsPage() {
       if (ollamaUrl) setOllamaServerUrl(ollamaUrl);
       const ollamaModelVal = await getSetting("ollama_model");
       if (ollamaModelVal) setOllamaModel(ollamaModelVal);
+      const ollamaKey = await getSecureSetting("ollama_api_key");
+      setOllamaApiKey(ollamaKey ?? "");
       const claudeModelVal = await getSetting("claude_model");
       if (claudeModelVal) setClaudeModel(claudeModelVal);
       const openaiModelVal = await getSetting("openai_model");
@@ -1067,7 +1102,7 @@ export function SettingsPage() {
                       {aiProvider === "claude" && `Uses ${PROVIDER_MODELS.claude.find((m) => m.id === claudeModel)?.label ?? claudeModel}.`}
                       {aiProvider === "openai" && `Uses ${PROVIDER_MODELS.openai.find((m) => m.id === openaiModel)?.label ?? openaiModel}.`}
                       {aiProvider === "gemini" && `Uses ${PROVIDER_MODELS.gemini.find((m) => m.id === geminiModel)?.label ?? geminiModel}.`}
-                      {aiProvider === "ollama" && "Connect to a local Ollama or LMStudio server. No API key required."}
+                      {aiProvider === "ollama" && "Connect to a local or remote Ollama / LM Studio / OpenAI-compatible server. API key optional."}
                       {aiProvider === "copilot" && `Uses ${PROVIDER_MODELS.copilot.find((m) => m.id === copilotModel)?.label ?? copilotModel}. Requires a GitHub PAT with models:read permission.`}
                     </p>
                   </Section>
@@ -1083,12 +1118,86 @@ export function SettingsPage() {
                           placeholder="http://localhost:11434"
                         />
                         <TextField
-                          label="Model Name"
+                          label="API Key (optional)"
                           size="md"
-                          value={ollamaModel}
-                          onChange={(e) => setOllamaModel(e.target.value)}
-                          placeholder="llama3.2"
+                          type="password"
+                          value={ollamaApiKey}
+                          onChange={(e) => setOllamaApiKey(e.target.value)}
+                          placeholder="Leave blank for local Ollama / LM Studio"
                         />
+                        <div className="space-y-1.5">
+                          <label className="text-sm text-text-secondary block mb-1.5">Model Name</label>
+                          {ollamaModels.length > 0 && !ollamaManualModel ? (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={ollamaModels.includes(ollamaModel) ? ollamaModel : ""}
+                                  onChange={(e) => setOllamaModel(e.target.value)}
+                                  className="flex-1 bg-bg-tertiary text-text-primary text-sm px-3 py-2 rounded-md border border-border-primary focus:border-accent outline-none"
+                                >
+                                  <option value="" disabled>
+                                    Select a model…
+                                  </option>
+                                  {ollamaModels.map((m) => (
+                                    <option key={m} value={m}>
+                                      {m}
+                                    </option>
+                                  ))}
+                                </select>
+                                <Button
+                                  variant="secondary"
+                                  size="md"
+                                  onClick={loadOllamaModels}
+                                  disabled={!ollamaServerUrl.trim() || ollamaModelsLoading}
+                                  className="bg-bg-tertiary text-text-primary border border-border-primary whitespace-nowrap"
+                                >
+                                  {ollamaModelsLoading ? "Loading..." : "Refresh"}
+                                </Button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setOllamaManualModel(true)}
+                                className="text-xs text-accent hover:underline"
+                              >
+                                Enter name manually
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1">
+                                  <TextField
+                                    size="md"
+                                    value={ollamaModel}
+                                    onChange={(e) => setOllamaModel(e.target.value)}
+                                    placeholder="llama3.2"
+                                  />
+                                </div>
+                                <Button
+                                  variant="secondary"
+                                  size="md"
+                                  onClick={loadOllamaModels}
+                                  disabled={!ollamaServerUrl.trim() || ollamaModelsLoading}
+                                  className="bg-bg-tertiary text-text-primary border border-border-primary whitespace-nowrap"
+                                >
+                                  {ollamaModelsLoading ? "Loading..." : "Load models"}
+                                </Button>
+                              </div>
+                              {ollamaModels.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setOllamaManualModel(false)}
+                                  className="text-xs text-accent hover:underline"
+                                >
+                                  Choose from loaded models
+                                </button>
+                              )}
+                            </>
+                          )}
+                          {ollamaModelsError && (
+                            <p className="text-xs text-text-tertiary">{ollamaModelsError}</p>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <Button
                             variant="primary"
@@ -1096,6 +1205,7 @@ export function SettingsPage() {
                             onClick={async () => {
                               await setSetting("ollama_server_url", ollamaServerUrl.trim());
                               await setSetting("ollama_model", ollamaModel.trim());
+                              await setSecureSetting("ollama_api_key", ollamaApiKey.trim());
                               const { clearProviderClients } = await import("@/services/ai/providerManager");
                               clearProviderClients();
                               setAiKeySaved(true);
