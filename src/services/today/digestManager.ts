@@ -57,7 +57,10 @@ export interface TodayDigest {
   aiAvailable: boolean;
   stats: TodayStats;
   threads: TodayThread[];
+  /** Action items: threads a human expects you to reply to. */
   needsReply: TodayThread[];
+  /** Side info: today's mail that doesn't need a reply (alerts, receipts, automated). */
+  fyi: TodayThread[];
   vip: TodayThread[];
   agenda: AgendaItem[];
   brief: string | null;
@@ -369,6 +372,12 @@ export async function buildTodayDigest(
   // "Awaiting you" stat reflects the refined needs-reply list.
   const stats = { ...computeStats(threads, accountEmail), awaitingReply: needsReply.length };
 
+  // FYI: today's mail that isn't an action item and isn't your own sent message.
+  const needsReplyIds = new Set(needsReply.map((t) => t.id));
+  const fyi = threads.filter(
+    (t) => !needsReplyIds.has(t.id) && normalizeEmail(t.fromAddress) !== normalizeEmail(accountEmail),
+  );
+
   // VIP highlights: VIP senders, falling back to Gmail "important".
   const vipSenders = await getVipSenders(accountId).catch(() => new Set<string>());
   const vip = threads.filter((t) => {
@@ -409,6 +418,7 @@ export async function buildTodayDigest(
     stats,
     threads,
     needsReply,
+    fyi,
     vip,
     agenda,
     brief,

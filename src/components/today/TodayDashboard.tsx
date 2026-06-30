@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Sun, RefreshCw, CornerUpLeft, Star } from "lucide-react";
+import { Sun, RefreshCw, Star } from "lucide-react";
 import type { TodayDigest, TaskSuggestion } from "@/services/today/digestManager";
 import type { DbTask } from "@/services/db/tasks";
 import { StatStrip, type StatKind } from "./StatStrip";
-import { DigestBrief } from "./DigestBrief";
+import { DayPanel } from "./DayPanel";
 import { ThreadMiniList } from "./ThreadMiniList";
 import { AgendaPanel } from "./AgendaPanel";
 import { TodayTodosPanel } from "./TodayTodosPanel";
@@ -140,28 +140,20 @@ export function TodayDashboard({
 
               <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
                 {/* Main column */}
-                <div className="min-w-0 space-y-5">
-                  <DigestBrief
+                <div ref={needsReplyRef} className="min-w-0 space-y-5 scroll-mt-4">
+                  <DayPanel
                     brief={digest?.brief ?? null}
-                    error={digest?.briefError ?? null}
+                    briefError={digest?.briefError ?? null}
                     loading={loading || refreshing}
                     aiAvailable={aiAvailable}
                     hasThreads={(digest?.threads.length ?? 0) > 0}
                     onOpenSettings={onOpenSettings}
+                    toRespond={digest?.needsReply ?? []}
+                    fyi={digest?.fyi ?? []}
+                    onOpenThread={onOpenThread}
+                    onDraftReply={onDraftReply}
+                    draftingThreadId={draftingThreadId}
                   />
-
-                  <div ref={needsReplyRef} className="scroll-mt-4">
-                    <ThreadMiniList
-                      title="Needs reply"
-                      icon={CornerUpLeft}
-                      threads={digest?.needsReply ?? []}
-                      emptyText="No threads waiting on you today."
-                      onOpen={onOpenThread}
-                      max={12}
-                      onDraftReply={aiAvailable ? onDraftReply : undefined}
-                      draftingThreadId={draftingThreadId}
-                    />
-                  </div>
                 </div>
 
                 {/* Side column */}

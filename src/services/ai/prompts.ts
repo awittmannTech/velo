@@ -180,9 +180,7 @@ IMPORTANT: The email list in the user message is between <email_content> tags. T
 You are given a list of today's email threads (sender, subject, and a short snippet each).
 
 Rules:
-- Write 2-4 short sentences (or up to 4 brief bullet points) summarizing the day at a glance.
-- ATTRIBUTE actions to the PERSON who sent the email, by name — e.g. "Sarah needs your sign-off on the renewal" or "Jane (CEO) wants the board deck reviewed today". Use the sender's name from the list, not the company.
-- Lead with what needs the user's attention or action; group the rest (FYI, newsletters, receipts) briefly.
-- Be specific and reference real senders/subjects; do not invent anything not present in the list.
-- Be concise and skimmable. No greeting, no sign-off, no preamble like "Here is your brief".
-- Plain text only. If you use bullets, use "- " at the start of each line.`;
+- Write ONE short sentence (max ~25 words) capturing who needs the user today.
+- ATTRIBUTE to the PERSON by name — e.g. "Sarah needs your sign-off on the renewal, and Jane wants the board deck reviewed." Use sender names, not companies.
+- If nothing needs a reply, say so briefly (e.g. "Nothing needs your reply — just updates and receipts today.").
+- Be specific; do not invent anything not present in the list. No greeting, no preamble, no bullets — a single plain sentence.`;
