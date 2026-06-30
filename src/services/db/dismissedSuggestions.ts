@@ -18,6 +18,17 @@ export async function dismissTaskSuggestion(
   );
 }
 
+export async function undismissTaskSuggestion(
+  accountId: string,
+  threadId: string,
+): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "DELETE FROM dismissed_task_suggestions WHERE account_id = $1 AND thread_id = $2",
+    [accountId, threadId],
+  );
+}
+
 export async function getDismissedSuggestionThreadIds(
   accountId: string,
 ): Promise<Set<string>> {

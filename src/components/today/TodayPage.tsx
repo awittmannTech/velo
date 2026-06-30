@@ -11,8 +11,9 @@ import {
   type DbTask,
 } from "@/services/db/tasks";
 import { getMessagesForThread } from "@/services/db/messages";
-import { dismissTaskSuggestion } from "@/services/db/dismissedSuggestions";
+import { dismissTaskSuggestion, undismissTaskSuggestion } from "@/services/db/dismissedSuggestions";
 import { generateAutoDraft } from "@/services/ai/writingStyleService";
+import type { ToastData } from "./Toast";
 import {
   buildTodayDigest,
   getTodayStartMs,
@@ -52,9 +53,33 @@ export function TodayPage() {
   const [busyThreadIds, setBusyThreadIds] = useState<Set<string>>(new Set());
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
   const [draftingThreadId, setDraftingThreadId] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef(false);
+  const toastIdRef = useRef(0);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const closeToast = useCallback(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast(null);
+  }, []);
+
+  const showToast = useCallback(
+    (message: string, opts?: { action?: ToastData["action"]; pending?: boolean }) => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      const id = ++toastIdRef.current;
+      setToast({ id, message, action: opts?.action, pending: opts?.pending });
+      if (!opts?.pending) {
+        toastTimerRef.current = setTimeout(() => {
+          setToast((t) => (t && t.id === id ? null : t));
+        }, 6000);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   const load = useCallback(
     async (forceAi: boolean) => {
@@ -123,8 +148,12 @@ export function TodayPage() {
       setSuggestions((prev) => prev.filter((x) => x.threadId !== s.threadId));
       const [start, end] = todayRangeSec();
       setTodos(await getTodayTasks(s.accountId, start, end));
+      showToast("Added to today's to-dos", {
+        action: { label: "View in Tasks", onClick: () => { closeToast(); navigateToLabel("tasks"); } },
+      });
     } catch (err) {
       console.error("[Velo] Accept task suggestion failed:", err);
+      showToast("Couldn't create the task");
     } finally {
       setBusyThreadIds((prev) => {
         const next = new Set(prev);
@@ -132,7 +161,7 @@ export function TodayPage() {
         return next;
       });
     }
-  }, []);
+  }, [showToast, closeToast]);
 
   const handleCompleteTodo = useCallback(
     async (taskId: string) => {
@@ -161,19 +190,37 @@ export function TodayPage() {
     setSuggestions((prev) => prev.filter((x) => x.threadId !== s.threadId));
     try {
       await dismissTaskSuggestion(s.accountId, s.threadId);
+      showToast("Suggestion dismissed", {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            closeToast();
+            try {
+              await undismissTaskSuggestion(s.accountId, s.threadId);
+            } catch (err) {
+              console.error("[Velo] Undo dismiss failed:", err);
+            }
+            setSuggestions((prev) => (prev.some((x) => x.threadId === s.threadId) ? prev : [s, ...prev]));
+          },
+        },
+      });
     } catch (err) {
       console.error("[Velo] Dismiss task suggestion failed:", err);
     }
-  }, []);
+  }, [showToast, closeToast]);
 
   const handleDraftReply = useCallback(
     async (threadId: string) => {
       if (!accountId || draftingThreadId) return;
       setDraftingThreadId(threadId);
+      showToast("Drafting your reply…", { pending: true });
       try {
         const messages = await getMessagesForThread(accountId, threadId);
         const lastMessage = messages[messages.length - 1];
-        if (!lastMessage) return;
+        if (!lastMessage) {
+          closeToast();
+          return;
+        }
         const draft = await generateAutoDraft(threadId, accountId, messages, "reply");
         const replyTo = lastMessage.reply_to ?? lastMessage.from_address;
         useComposerStore.getState().openComposer({
@@ -184,13 +231,15 @@ export function TodayPage() {
           threadId: lastMessage.thread_id,
           inReplyToMessageId: lastMessage.id,
         });
+        closeToast();
       } catch (err) {
         console.error("[Velo] Draft reply failed:", err);
+        showToast("Couldn't draft a reply");
       } finally {
         setDraftingThreadId(null);
       }
     },
-    [accountId, draftingThreadId],
+    [accountId, draftingThreadId, showToast, closeToast],
   );
 
   if (!accountId) {
@@ -212,8 +261,11 @@ export function TodayPage() {
       refreshing={refreshing}
       busyThreadIds={busyThreadIds}
       completingIds={completingIds}
+      toast={toast}
+      onToastClose={closeToast}
       onRefresh={() => load(true)}
       onOpenThread={openThread}
+      onOpenInbox={() => navigateToLabel("inbox")}
       onOpenSettings={() => navigateToSettings("ai")}
       onAcceptSuggestion={handleAccept}
       onDismissSuggestion={handleDismiss}
