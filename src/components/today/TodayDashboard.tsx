@@ -20,6 +20,8 @@ interface TodayDashboardProps {
   onOpenSettings: () => void;
   onAcceptSuggestion: (s: TaskSuggestion) => void;
   onDismissSuggestion: (s: TaskSuggestion) => void;
+  onDraftReply: (threadId: string) => void;
+  draftingThreadId: string | null;
 }
 
 function greeting(now: Date): string {
@@ -47,6 +49,8 @@ export function TodayDashboard({
   onOpenSettings,
   onAcceptSuggestion,
   onDismissSuggestion,
+  onDraftReply,
+  draftingThreadId,
 }: TodayDashboardProps) {
   const aiAvailable = digest?.aiAvailable ?? true;
 
@@ -95,6 +99,22 @@ export function TodayDashboard({
                 onOpenSettings={onOpenSettings}
               />
 
+              <ThreadMiniList
+                title="Needs reply"
+                icon={CornerUpLeft}
+                threads={digest?.needsReply ?? []}
+                emptyText="No threads waiting on you today."
+                onOpen={onOpenThread}
+                max={12}
+                onDraftReply={aiAvailable ? onDraftReply : undefined}
+                draftingThreadId={draftingThreadId}
+              />
+            </div>
+
+            {/* Side column */}
+            <div className="min-w-0 space-y-5">
+              <AgendaPanel items={digest?.agenda ?? []} onOpen={onOpenThread} />
+
               <TaskSuggestionsPanel
                 suggestions={suggestions}
                 loading={loading || refreshing}
@@ -106,18 +126,6 @@ export function TodayDashboard({
                 onOpen={onOpenThread}
               />
 
-              <ThreadMiniList
-                title="Needs reply"
-                icon={CornerUpLeft}
-                threads={digest?.needsReply ?? []}
-                emptyText="No threads waiting on you today."
-                onOpen={onOpenThread}
-              />
-            </div>
-
-            {/* Side column */}
-            <div className="min-w-0 space-y-5">
-              <AgendaPanel items={digest?.agenda ?? []} onOpen={onOpenThread} />
               <ThreadMiniList
                 title="VIP & important"
                 icon={Star}

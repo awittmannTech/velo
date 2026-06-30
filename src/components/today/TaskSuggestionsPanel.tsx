@@ -41,41 +41,39 @@ function SuggestionCard({
 }) {
   const due = formatDue(s.dueDate);
   return (
-    <div className="rounded-xl border border-border-primary bg-bg-primary/40 p-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-text-primary">{s.title}</p>
-          {s.description && <p className="mt-0.5 text-xs text-text-secondary line-clamp-2">{s.description}</p>}
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
+    <div className="rounded-lg border border-border-primary bg-bg-primary/40 px-3 py-2.5 flex items-start gap-2">
+      <div className="min-w-0 flex-1">
+        <button onClick={() => onOpen(s.threadId)} className="block w-full text-left">
+          <span className="block text-sm font-medium text-text-primary line-clamp-2 leading-snug">{s.title}</span>
+        </button>
+        {(s.priority !== "none" || due) && (
+          <div className="mt-1 flex items-center gap-2">
             {s.priority !== "none" && (
               <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${PRIORITY_STYLE[s.priority]}`}>
                 {s.priority}
               </span>
             )}
             {due && <span className="text-[11px] text-text-tertiary">Due {due}</span>}
-            <button onClick={() => onOpen(s.threadId)} className="text-[11px] text-accent hover:underline truncate max-w-[14rem]">
-              {s.subject}
-            </button>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={() => onAccept(s)}
-            disabled={busy}
-            title="Create task"
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent text-white hover:bg-accent-hover disabled:opacity-50"
-          >
-            {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-          </button>
-          <button
-            onClick={() => onDismiss(s)}
-            disabled={busy}
-            title="Dismiss"
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-bg-tertiary text-text-secondary hover:text-text-primary border border-border-primary disabled:opacity-50"
-          >
-            <X size={14} />
-          </button>
-        </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          onClick={() => onAccept(s)}
+          disabled={busy}
+          title="Create task"
+          className="w-6 h-6 flex items-center justify-center rounded-md bg-accent text-white hover:bg-accent-hover disabled:opacity-50"
+        >
+          {busy ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />}
+        </button>
+        <button
+          onClick={() => onDismiss(s)}
+          disabled={busy}
+          title="Dismiss"
+          className="w-6 h-6 flex items-center justify-center rounded-md bg-bg-tertiary text-text-secondary hover:text-text-primary border border-border-primary disabled:opacity-50"
+        >
+          <X size={13} />
+        </button>
       </div>
     </div>
   );

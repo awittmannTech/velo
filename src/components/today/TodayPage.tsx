@@ -1,11 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccountStore } from "@/stores/accountStore";
 import { useTaskStore } from "@/stores/taskStore";
+import { useComposerStore } from "@/stores/composerStore";
 import { navigateToLabel, navigateToSettings } from "@/router/navigate";
 import { insertTask, getIncompleteTaskCount } from "@/services/db/tasks";
+import { getMessagesForThread } from "@/services/db/messages";
 import { dismissTaskSuggestion } from "@/services/db/dismissedSuggestions";
+import { generateAutoDraft } from "@/services/ai/writingStyleService";
 import { buildTodayDigest, type TodayDigest, type TaskSuggestion } from "@/services/today/digestManager";
 import { TodayDashboard } from "./TodayDashboard";
+
+/** Convert a plain-text AI draft into safe paragraph HTML for the composer. */
+function draftToHtml(text: string): string {
+  const escape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .split(/\n{2,}/)
+    .map((p) => `<p>${escape(p.trim()).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
 
 const SYNC_DEBOUNCE_MS = 5000;
 
@@ -20,6 +33,7 @@ export function TodayPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyThreadIds, setBusyThreadIds] = useState<Set<string>>(new Set());
+  const [draftingThreadId, setDraftingThreadId] = useState<string | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef(false);
@@ -107,6 +121,33 @@ export function TodayPage() {
     }
   }, []);
 
+  const handleDraftReply = useCallback(
+    async (threadId: string) => {
+      if (!accountId || draftingThreadId) return;
+      setDraftingThreadId(threadId);
+      try {
+        const messages = await getMessagesForThread(accountId, threadId);
+        const lastMessage = messages[messages.length - 1];
+        if (!lastMessage) return;
+        const draft = await generateAutoDraft(threadId, accountId, messages, "reply");
+        const replyTo = lastMessage.reply_to ?? lastMessage.from_address;
+        useComposerStore.getState().openComposer({
+          mode: "reply",
+          to: replyTo ? [replyTo] : [],
+          subject: `Re: ${lastMessage.subject ?? ""}`,
+          bodyHtml: draftToHtml(draft),
+          threadId: lastMessage.thread_id,
+          inReplyToMessageId: lastMessage.id,
+        });
+      } catch (err) {
+        console.error("[Velo] Draft reply failed:", err);
+      } finally {
+        setDraftingThreadId(null);
+      }
+    },
+    [accountId, draftingThreadId],
+  );
+
   if (!accountId) {
     return (
       <div className="flex-1 flex items-center justify-center text-text-tertiary text-sm">
@@ -129,6 +170,8 @@ export function TodayPage() {
       onOpenSettings={() => navigateToSettings("ai")}
       onAcceptSuggestion={handleAccept}
       onDismissSuggestion={handleDismiss}
+      onDraftReply={handleDraftReply}
+      draftingThreadId={draftingThreadId}
     />
   );
 }
