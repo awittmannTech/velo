@@ -17,6 +17,7 @@ import {
   DAILY_DIGEST_PROMPT,
   INBOX_PROFILE_PROMPT,
   PROPOSE_TAGS_PROMPT,
+  MERGE_TAGS_PROMPT,
 } from "./prompts";
 
 async function callAi(systemPrompt: string, userContent: string): Promise<string> {
@@ -265,6 +266,12 @@ export async function analyzeInboxProfile(signalsText: string): Promise<string> 
 export async function proposeSmartTags(profileJson: string, existingTags: string[]): Promise<string> {
   const content = `Inbox profile:\n${profileJson}\n\nExisting tags: ${existingTags.join(", ") || "(none)"}`;
   return callAi(PROPOSE_TAGS_PROMPT, `<email_content>${content}</email_content>`.slice(0, 8000));
+}
+
+/** Propose keep/merge/delete actions for the user's existing tags. */
+export async function proposeTagMergesAI(tags: { name: string; count: number }[]): Promise<string> {
+  const list = tags.map((t) => `${t.name} (${t.count})`).join("\n");
+  return callAi(MERGE_TAGS_PROMPT, `<email_content>${list}</email_content>`.slice(0, 8000));
 }
 
 export async function testConnection(): Promise<boolean> {

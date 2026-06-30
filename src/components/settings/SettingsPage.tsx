@@ -4,6 +4,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { navigateToLabel, navigateToSettings } from "@/router/navigate";
 import { useAccountStore } from "@/stores/accountStore";
 import { SmartTagSetup } from "@/components/smartTags/SmartTagSetup";
+import { TagCleanupWizard } from "@/components/labels/TagCleanupWizard";
 import { getSetting, setSetting, getSecureSetting, setSecureSetting } from "@/services/db/settings";
 import { PROVIDER_MODELS } from "@/services/ai/types";
 import { deleteAccount } from "@/services/db/accounts";
@@ -100,6 +101,7 @@ export function SettingsPage() {
   const accounts = useAccountStore((s) => s.accounts);
   const removeAccountFromStore = useAccountStore((s) => s.removeAccount);
   const [smartTagOpen, setSmartTagOpen] = useState(false);
+  const [tagCleanupOpen, setTagCleanupOpen] = useState(false);
   const { tab } = useParams({ strict: false }) as { tab?: string };
   const activeTab = (tab && tabs.some((t) => t.id === tab) ? tab : "general") as SettingsTab;
   const setActiveTab = (t: SettingsTab) => navigateToSettings(t);
@@ -1474,15 +1476,26 @@ export function SettingsPage() {
                     <p className="text-xs text-text-tertiary mb-3">
                       Let AI study your inbox and suggest personalized tags based on your people, projects, and what actually fills your inbox. You approve each one before it's created and applied.
                     </p>
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      onClick={() => setSmartTagOpen(true)}
-                      disabled={!accounts.find((a) => a.isActive)}
-                      className="bg-bg-tertiary text-text-primary border border-border-primary"
-                    >
-                      Set up smart tags
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => setSmartTagOpen(true)}
+                        disabled={!accounts.find((a) => a.isActive)}
+                        className="bg-bg-tertiary text-text-primary border border-border-primary"
+                      >
+                        Set up smart tags
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => setTagCleanupOpen(true)}
+                        disabled={!accounts.find((a) => a.isActive)}
+                        className="bg-bg-tertiary text-text-primary border border-border-primary"
+                      >
+                        Tidy up my tags
+                      </Button>
+                    </div>
                   </Section>
 
                   <Section title="Categories">
@@ -1521,6 +1534,11 @@ export function SettingsPage() {
               <SmartTagSetup
                 isOpen={smartTagOpen}
                 onClose={() => setSmartTagOpen(false)}
+                accountId={accounts.find((a) => a.isActive)?.id ?? ""}
+              />
+              <TagCleanupWizard
+                isOpen={tagCleanupOpen}
+                onClose={() => setTagCleanupOpen(false)}
                 accountId={accounts.find((a) => a.isActive)?.id ?? ""}
               />
 
