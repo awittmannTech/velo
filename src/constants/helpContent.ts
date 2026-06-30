@@ -764,7 +764,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         title: "AI overview",
         summary: "Choose your AI provider and bring your own key.",
         description:
-          "The app supports three AI providers: Anthropic Claude, OpenAI GPT, and Google Gemini. You bring your own API key, which means your email data is sent directly to the provider's API — there's no middleman or third-party server involved. API keys are stored securely in your local database. AI features include thread summaries, smart replies, compose assistance, text transformation, and natural language inbox queries. You can enable or disable AI features globally, and choose which provider to use.",
+          "The app supports several AI providers: Anthropic Claude, OpenAI GPT, Google Gemini, GitHub Copilot, and local or self-hosted servers (Ollama, LM Studio, or any OpenAI-compatible endpoint). You bring your own API key, which means your email data is sent directly to the provider's API — there's no middleman or third-party server involved. API keys are stored securely in your local database. AI features include thread summaries, smart replies, compose assistance, text transformation, and natural language inbox queries. You can enable or disable AI features globally, and choose which provider to use.",
         tips: [
           { text: "Add your API key in Settings > AI." },
           { text: "Supported providers: Claude, OpenAI, and Gemini." },
@@ -775,6 +775,23 @@ export const HELP_CATEGORIES: HelpCategory[] = [
           { text: "API keys are stored securely in your local database." },
           { text: "AI results are cached locally to reduce API calls." },
           { text: "Disable AI globally with one toggle in Settings." },
+        ],
+        relatedSettingsTab: "ai",
+      },
+      {
+        id: "local-ai-server",
+        icon: Server,
+        title: "Local & self-hosted AI",
+        summary: "Run AI on your own machine or a private server — no cloud key needed.",
+        description:
+          "Choose the \"Local AI\" provider to connect to Ollama, LM Studio, or any OpenAI-compatible server, running on this Mac or anywhere you can reach it over the network (including a private Tailscale address). Enter the Server URL — the host and port only, e.g. http://localhost:1234 or http://10.0.0.5:8080. If your server requires authentication, add an API key and it's sent as a standard Bearer token; leave it blank for a local Ollama or LM Studio install. Instead of typing the model name, click Load models to probe the server and pick from a dropdown of everything it has available. Your email never leaves your own infrastructure, which makes this the most private option.",
+        tips: [
+          { text: "Set the provider to \"Local AI (Ollama / LM Studio)\" in Settings > AI." },
+          { text: "Server URL is host:port only — a trailing /v1 is handled for you." },
+          { text: "Leave the API key blank for local Ollama / LM Studio; fill it in for authenticated servers (sent as a Bearer token)." },
+          { text: "Click Load models to pick from a dropdown instead of typing the name." },
+          { text: "Use \"Enter name manually\" if your server doesn't list models." },
+          { text: "Click Test Connection to confirm the server is reachable before saving." },
         ],
         relatedSettingsTab: "ai",
       },
