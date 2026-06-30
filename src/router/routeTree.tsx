@@ -14,6 +14,7 @@ const HelpPage = lazy(() => import("@/components/help/HelpPage").then((m) => ({ 
 const CalendarPage = lazy(() => import("@/components/calendar/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const TasksPage = lazy(() => import("@/components/tasks/TasksPage").then((m) => ({ default: m.TasksPage })));
 const TodayPage = lazy(() => import("@/components/today/TodayPage").then((m) => ({ default: m.TodayPage })));
+const CleanupPage = lazy(() => import("@/components/cleanup/CleanupPage").then((m) => ({ default: m.CleanupPage })));
 const AttachmentLibrary = lazy(() => import("@/components/attachments/AttachmentLibrary").then((m) => ({ default: m.AttachmentLibrary })));
 
 // ---------- Search param validation ----------
@@ -198,6 +199,23 @@ export const todayRoute = createRoute({
   component: TodayPageWrapper,
 });
 
+// ---------- /cleanup ----------
+function CleanupPageWrapper() {
+  return (
+    <ErrorBoundary name="CleanupPage">
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center text-text-tertiary text-sm">Loading cleanup...</div>}>
+        <CleanupPage />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+export const cleanupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "cleanup",
+  component: CleanupPageWrapper,
+});
+
 // ---------- /calendar ----------
 export const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -232,6 +250,7 @@ export const routeTree = rootRoute.addChildren([
   attachmentsRoute,
   tasksRoute,
   todayRoute,
+  cleanupRoute,
   calendarRoute,
   helpIndexRoute,
   helpTopicRoute,

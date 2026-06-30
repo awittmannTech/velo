@@ -13,6 +13,7 @@ import { useActiveLabel, useActiveCategory } from "@/hooks/useRouteNavigation";
 import { navigateToLabel } from "@/router/navigate";
 import {
   Sun,
+  Eraser,
   Inbox,
   Star,
   Clock,
@@ -61,6 +62,7 @@ export const ALL_NAV_ITEMS: { id: string; label: string; icon: LucideIcon }[] = 
   { id: "spam", label: "Spam", icon: Ban },
   { id: "all", label: "All Mail", icon: Mail },
   { id: "tasks", label: "Tasks", icon: CheckSquare },
+  { id: "cleanup", label: "Clean up", icon: Eraser },
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "attachments", label: "Attachments", icon: Paperclip },
   { id: "smart-folders", label: "Smart Folders", icon: FolderSearch },
