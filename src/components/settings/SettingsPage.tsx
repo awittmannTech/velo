@@ -3,6 +3,7 @@ import { useParams } from "@tanstack/react-router";
 import { useUIStore } from "@/stores/uiStore";
 import { navigateToLabel, navigateToSettings } from "@/router/navigate";
 import { useAccountStore } from "@/stores/accountStore";
+import { SmartTagSetup } from "@/components/smartTags/SmartTagSetup";
 import { getSetting, setSetting, getSecureSetting, setSecureSetting } from "@/services/db/settings";
 import { PROVIDER_MODELS } from "@/services/ai/types";
 import { deleteAccount } from "@/services/db/accounts";
@@ -98,6 +99,7 @@ export function SettingsPage() {
   const setReduceMotion = useUIStore((s) => s.setReduceMotion);
   const accounts = useAccountStore((s) => s.accounts);
   const removeAccountFromStore = useAccountStore((s) => s.removeAccount);
+  const [smartTagOpen, setSmartTagOpen] = useState(false);
   const { tab } = useParams({ strict: false }) as { tab?: string };
   const activeTab = (tab && tabs.some((t) => t.id === tab) ? tab : "general") as SettingsTab;
   const setActiveTab = (t: SettingsTab) => navigateToSettings(t);
@@ -1468,6 +1470,21 @@ export function SettingsPage() {
                     )}
                   </Section>
 
+                  <Section title="Smart Tags">
+                    <p className="text-xs text-text-tertiary mb-3">
+                      Let AI study your inbox and suggest personalized tags based on your people, projects, and what actually fills your inbox. You approve each one before it's created and applied.
+                    </p>
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      onClick={() => setSmartTagOpen(true)}
+                      disabled={!accounts.find((a) => a.isActive)}
+                      className="bg-bg-tertiary text-text-primary border border-border-primary"
+                    >
+                      Set up smart tags
+                    </Button>
+                  </Section>
+
                   <Section title="Categories">
                     <p className="text-xs text-text-tertiary mb-1">
                       Incoming emails are automatically sorted using rule-based heuristics (Gmail labels, sender domain, headers). When AI is enabled, it refines results for better accuracy.
@@ -1500,6 +1517,12 @@ export function SettingsPage() {
                   </Section>
                 </>
               )}
+
+              <SmartTagSetup
+                isOpen={smartTagOpen}
+                onClose={() => setSmartTagOpen(false)}
+                accountId={accounts.find((a) => a.isActive)?.id ?? ""}
+              />
 
               {activeTab === "about" && (
                 <>

@@ -15,6 +15,8 @@ import {
   SMART_LABEL_PROMPT,
   EXTRACT_TASK_PROMPT,
   DAILY_DIGEST_PROMPT,
+  INBOX_PROFILE_PROMPT,
+  PROPOSE_TAGS_PROMPT,
 } from "./prompts";
 
 async function callAi(systemPrompt: string, userContent: string): Promise<string> {
@@ -252,6 +254,17 @@ export async function generateDailyDigest(
     .join("\n");
   const userContent = `<email_content>${lines}</email_content>`.slice(0, 8000);
   return callAi(DAILY_DIGEST_PROMPT, userContent);
+}
+
+/** Build a profile of the user's inbox from a compact text summary of signals. */
+export async function analyzeInboxProfile(signalsText: string): Promise<string> {
+  return callAi(INBOX_PROFILE_PROMPT, `<email_content>${signalsText}</email_content>`.slice(0, 8000));
+}
+
+/** Propose personalized tags from an inbox profile + the user's existing tag names. */
+export async function proposeSmartTags(profileJson: string, existingTags: string[]): Promise<string> {
+  const content = `Inbox profile:\n${profileJson}\n\nExisting tags: ${existingTags.join(", ") || "(none)"}`;
+  return callAi(PROPOSE_TAGS_PROMPT, `<email_content>${content}</email_content>`.slice(0, 8000));
 }
 
 export async function testConnection(): Promise<boolean> {
