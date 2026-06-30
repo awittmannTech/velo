@@ -77,7 +77,7 @@ export function TodayDashboard({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
-        <div className="max-w-5xl mx-auto space-y-5">
+        <div className="w-full space-y-5">
           <StatStrip
             stats={digest?.stats ?? { received: 0, unread: 0, awaitingReply: 0 }}
             vipCount={digest?.vip.length ?? 0}
