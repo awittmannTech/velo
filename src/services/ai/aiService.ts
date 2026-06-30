@@ -18,6 +18,7 @@ import {
   INBOX_PROFILE_PROMPT,
   PROPOSE_TAGS_PROMPT,
   MERGE_TAGS_PROMPT,
+  NEEDS_REPLY_PROMPT,
 } from "./prompts";
 
 async function callAi(systemPrompt: string, userContent: string): Promise<string> {
@@ -266,6 +267,30 @@ export async function analyzeInboxProfile(signalsText: string): Promise<string> 
 export async function proposeSmartTags(profileJson: string, existingTags: string[]): Promise<string> {
   const content = `Inbox profile:\n${profileJson}\n\nExisting tags: ${existingTags.join(", ") || "(none)"}`;
   return callAi(PROPOSE_TAGS_PROMPT, `<email_content>${content}</email_content>`.slice(0, 8000));
+}
+
+/**
+ * Classify which of the given threads actually need a personal reply. Returns
+ * the set of thread ids that do.
+ */
+export async function classifyNeedsReply(
+  threads: { id: string; fromName: string | null; fromAddress: string | null; subject: string; snippet: string }[],
+): Promise<Set<string>> {
+  const input = threads
+    .map((t) => `<email_content>ID:${t.id} | From:${t.fromName?.trim() || t.fromAddress || "Unknown"} | Subject:${t.subject} | ${t.snippet}</email_content>`)
+    .join("\n");
+  const validIds = new Set(threads.map((t) => t.id));
+  const result = await callAi(NEEDS_REPLY_PROMPT, input);
+  const out = new Set<string>();
+  for (const line of result.split("\n")) {
+    const trimmed = line.trim();
+    const colon = trimmed.lastIndexOf(":");
+    if (colon === -1) continue;
+    const id = trimmed.slice(0, colon).trim();
+    const verdict = trimmed.slice(colon + 1).trim().toLowerCase();
+    if (validIds.has(id) && verdict.startsWith("y")) out.add(id);
+  }
+  return out;
 }
 
 /** Propose keep/merge/delete actions for the user's existing tags. */

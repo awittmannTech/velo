@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   getTodayStartMs,
   isNeedsReply,
+  isAutomatedSender,
   computeStats,
   selectSuggestionCandidates,
   digestContentHash,
@@ -47,6 +48,38 @@ describe("isNeedsReply", () => {
 
   it("is false when sender is missing", () => {
     expect(isNeedsReply(thread({ fromAddress: null }), me)).toBe(false);
+  });
+
+  it("is false for automated/no-reply senders (e.g. GitHub notifications)", () => {
+    expect(isNeedsReply(thread({ fromAddress: "notifications@github.com" }), me)).toBe(false);
+    expect(isNeedsReply(thread({ fromAddress: "no-reply@example.com" }), me)).toBe(false);
+  });
+});
+
+describe("isAutomatedSender", () => {
+  it("flags common automated mailboxes", () => {
+    for (const a of [
+      "notifications@github.com",
+      "no-reply@stripe.com",
+      "noreply@google.com",
+      "donotreply@bank.com",
+      "do.not.reply@x.com",
+      "alerts@datadog.com",
+      "mailer-daemon@host.com",
+      "bounce+abc@sendgrid.net",
+    ]) {
+      expect(isAutomatedSender(a)).toBe(true);
+    }
+  });
+
+  it("does not flag real people", () => {
+    for (const a of ["sarah@acme.com", "jordan.patel@company.com", "info@startup.io", "noreplytome@notme.com".replace("noreply", "hello")]) {
+      expect(isAutomatedSender(a)).toBe(false);
+    }
+  });
+
+  it("is false for empty", () => {
+    expect(isAutomatedSender(null)).toBe(false);
   });
 });
 

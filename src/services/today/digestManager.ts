@@ -9,7 +9,7 @@ import { getPendingFollowUpReminders } from "@/services/db/followUpReminders";
 import { getThreadById } from "@/services/db/threads";
 import { getAiCache, setAiCache } from "@/services/db/aiCache";
 import { isAiAvailable } from "@/services/ai/providerManager";
-import { generateDailyDigest } from "@/services/ai/aiService";
+import { generateDailyDigest, classifyNeedsReply } from "@/services/ai/aiService";
 import { extractTask } from "@/services/ai/taskExtraction";
 
 // ---------- Types ----------
@@ -79,11 +79,28 @@ function normalizeEmail(addr: string | null | undefined): string {
   return (addr ?? "").trim().toLowerCase();
 }
 
-/** A thread needs a reply if its latest message is from someone other than the user. */
+// Local parts that signal an unattended/automated mailbox no human reads.
+const AUTOMATED_RE = /(^|[._+-])(no[._-]?reply|do[._-]?not[._-]?reply|notifications?|notify|alerts?|mailer[._-]?daemon|postmaster|bounce|automated|auto[._-]?confirm|donotreply|support[._-]?noreply)([._+-]|@|$)/i;
+
+/** Pure: is this address an unattended/automated sender that won't read a reply? */
+export function isAutomatedSender(address: string | null | undefined): boolean {
+  const addr = normalizeEmail(address);
+  if (!addr) return false;
+  const local = addr.split("@")[0] ?? "";
+  return AUTOMATED_RE.test(local) || AUTOMATED_RE.test(addr);
+}
+
+/**
+ * Rule fast-path for "needs reply": the latest message is from someone other
+ * than the user, and not an automated/no-reply sender. AI further refines which
+ * of these actually expect a human response (see refineNeedsReply).
+ */
 export function isNeedsReply(thread: TodayThread, accountEmail: string): boolean {
   const from = normalizeEmail(thread.fromAddress);
   if (!from) return false;
-  return from !== normalizeEmail(accountEmail);
+  if (from === normalizeEmail(accountEmail)) return false;
+  if (isAutomatedSender(from)) return false;
+  return true;
 }
 
 export function computeStats(threads: TodayThread[], accountEmail: string): TodayStats {
@@ -226,6 +243,64 @@ async function buildSuggestions(
   return { suggestions, error };
 }
 
+const NEEDS_REPLY_CACHE_TYPE = "needs_reply";
+
+/**
+ * Refine the rule-based needs-reply candidates with AI: keep only threads a
+ * human actually expects a reply to. Cached per-thread (keyed by lastMessageAt)
+ * so the auto-refresh is cheap; on AI failure, keeps all candidates.
+ */
+async function refineNeedsReply(
+  accountId: string,
+  candidates: TodayThread[],
+  forceAi: boolean,
+): Promise<TodayThread[]> {
+  const verdicts = new Map<string, boolean>();
+  const toClassify: TodayThread[] = [];
+
+  for (const t of candidates) {
+    if (!forceAi) {
+      const cached = await getAiCache(accountId, t.id, NEEDS_REPLY_CACHE_TYPE);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached) as { h: number; v: boolean };
+          if (parsed.h === (t.lastMessageAt ?? 0)) {
+            verdicts.set(t.id, parsed.v);
+            continue;
+          }
+        } catch {
+          // stale/corrupt → reclassify
+        }
+      }
+    }
+    toClassify.push(t);
+  }
+
+  if (toClassify.length > 0) {
+    try {
+      const yes = await classifyNeedsReply(
+        toClassify.map((t) => ({
+          id: t.id,
+          fromName: t.fromName,
+          fromAddress: t.fromAddress,
+          subject: t.subject,
+          snippet: t.snippet,
+        })),
+      );
+      for (const t of toClassify) {
+        const v = yes.has(t.id);
+        verdicts.set(t.id, v);
+        await setAiCache(accountId, t.id, NEEDS_REPLY_CACHE_TYPE, JSON.stringify({ h: t.lastMessageAt ?? 0, v }));
+      }
+    } catch {
+      // AI unavailable/failed — don't drop anything.
+      for (const t of toClassify) verdicts.set(t.id, true);
+    }
+  }
+
+  return candidates.filter((t) => verdicts.get(t.id) !== false);
+}
+
 async function buildAgenda(accountId: string, todayStartMs: number): Promise<AgendaItem[]> {
   const items: AgendaItem[] = [];
 
@@ -281,8 +356,18 @@ export async function buildTodayDigest(
   const dbThreads = await getInboxThreadsSince(accountId, todayStartMs);
   const threads = dbThreads.map(toTodayThread);
 
-  const stats = computeStats(threads, accountEmail);
-  const needsReply = threads.filter((t) => isNeedsReply(t, accountEmail));
+  const aiAvailable = await isAiAvailable();
+
+  // Needs reply: rule fast-path (excludes you + automated senders), then AI
+  // keeps only threads a human actually expects a reply to.
+  const ruleNeedsReply = threads.filter((t) => isNeedsReply(t, accountEmail));
+  const needsReply =
+    aiAvailable && ruleNeedsReply.length > 0
+      ? await refineNeedsReply(accountId, ruleNeedsReply, forceAi)
+      : ruleNeedsReply;
+
+  // "Awaiting you" stat reflects the refined needs-reply list.
+  const stats = { ...computeStats(threads, accountEmail), awaitingReply: needsReply.length };
 
   // VIP highlights: VIP senders, falling back to Gmail "important".
   const vipSenders = await getVipSenders(accountId).catch(() => new Set<string>());
@@ -295,8 +380,6 @@ export async function buildTodayDigest(
 
   const dayStartSec = Math.floor(todayStartMs / 1000);
   const todayTasks = await getTodayTasks(accountId, dayStartSec, dayStartSec + 86400).catch(() => []);
-
-  const aiAvailable = await isAiAvailable();
 
   let brief: string | null = null;
   let briefError: string | null = null;
