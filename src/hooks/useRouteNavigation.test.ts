@@ -75,6 +75,21 @@ describe("useRouteNavigation hooks", () => {
       expect(useActiveLabel()).toBe("calendar");
     });
 
+    it("should return 'today' from today route", () => {
+      setMatches([{ routeId: "/today", params: {} }]);
+      expect(useActiveLabel()).toBe("today");
+    });
+
+    it("should return 'tasks' from tasks route", () => {
+      setMatches([{ routeId: "/tasks", params: {} }]);
+      expect(useActiveLabel()).toBe("tasks");
+    });
+
+    it("should return 'attachments' from attachments route", () => {
+      setMatches([{ routeId: "/attachments", params: {} }]);
+      expect(useActiveLabel()).toBe("attachments");
+    });
+
     it("should return 'inbox' as fallback when no matches", () => {
       setMatches([]);
       expect(useActiveLabel()).toBe("inbox");
