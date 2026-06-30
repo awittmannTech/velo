@@ -66,6 +66,11 @@ import { useShortcutStore } from "./stores/shortcutStore";
 import { getIncompleteTaskCount } from "./services/db/tasks";
 import { useTaskStore } from "./stores/taskStore";
 import { ContextMenuPortal } from "./components/ui/ContextMenuPortal";
+import {
+  SyncIndicator,
+  syncProgressLabel,
+  type SyncIndicatorState,
+} from "./components/ui/SyncIndicator";
 import { MoveToFolderDialog } from "./components/email/MoveToFolderDialog";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
 import { UpdateToast } from "./components/ui/UpdateToast";
@@ -102,7 +107,10 @@ export default function App() {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [syncIndicator, setSyncIndicator] = useState<{
+    state: SyncIndicatorState;
+    label: string;
+  }>({ state: "idle", label: "" });
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showAskInbox, setShowAskInbox] = useState(false);
@@ -382,25 +390,29 @@ export default function App() {
 
   // Listen for sync status updates
   const backfillDoneRef = useRef(false);
+  const syncIdleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
+    const clearIdleTimer = () => {
+      if (syncIdleTimerRef.current) {
+        clearTimeout(syncIdleTimerRef.current);
+        syncIdleTimerRef.current = undefined;
+      }
+    };
+    const scheduleIdle = (delayMs: number) => {
+      clearIdleTimer();
+      syncIdleTimerRef.current = setTimeout(() => {
+        setSyncIndicator({ state: "idle", label: "" });
+      }, delayMs);
+    };
+
     const unsub = onSyncStatus((accountId, status, progress, error) => {
       if (status === "syncing") {
-        if (progress) {
-          if (progress.phase === "messages") {
-            setSyncStatus(
-              `Syncing: ${progress.current}/${progress.total} messages`,
-            );
-          } else if (progress.phase === "labels") {
-            setSyncStatus("Syncing labels...");
-          } else if (progress.phase === "threads") {
-            setSyncStatus(`Building threads... (${progress.current}/${progress.total})`);
-          }
-        } else {
-          setSyncStatus("Syncing...");
-        }
+        clearIdleTimer();
+        setSyncIndicator({ state: "syncing", label: syncProgressLabel(progress) });
       } else if (status === "done") {
-        setSyncStatus("Sync complete");
-        setTimeout(() => setSyncStatus(null), 2_000);
+        // Show a brief checkmark, then gently fade out.
+        setSyncIndicator({ state: "success", label: "Sync complete" });
+        scheduleIdle(2_000);
         window.dispatchEvent(new Event("velo-sync-done"));
         updateBadgeCount();
 
@@ -412,14 +424,20 @@ export default function App() {
             .catch((err) => console.error("Backfill error:", err));
         }
       } else if (status === "error") {
-        setSyncStatus(error ? `Sync failed: ${formatSyncError(error)}` : "Sync failed");
+        setSyncIndicator({
+          state: "error",
+          label: error ? `Sync failed: ${formatSyncError(error)}` : "Sync failed",
+        });
         // Still dispatch sync-done so the UI refreshes with any partially stored data
         window.dispatchEvent(new Event("velo-sync-done"));
         // Auto-clear the error after 8 seconds
-        setTimeout(() => setSyncStatus(null), 8_000);
+        scheduleIdle(8_000);
       }
     });
-    return unsub;
+    return () => {
+      unsub();
+      clearIdleTimer();
+    };
   }, []);
 
   // Sync theme class to <html> element
@@ -563,16 +581,8 @@ export default function App() {
         </DndProvider>
       </div>
 
-      {/* Sync status bar */}
-      {syncStatus && (
-        <div
-          className={`fixed bottom-0 left-0 right-0 glass-panel text-white text-xs px-4 py-1.5 text-center z-40 animate-[slideUp_200ms_ease-out,fadeIn_200ms_ease-out] ${
-            syncStatus.startsWith("Sync failed") ? "bg-danger/90" : "bg-accent/90"
-          }`}
-        >
-          {syncStatus}
-        </div>
-      )}
+      {/* Subtle sync indicator (bottom-right) */}
+      <SyncIndicator state={syncIndicator.state} label={syncIndicator.label} />
 
       {showAddAccount && (
         <AddAccount
