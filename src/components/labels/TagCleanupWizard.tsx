@@ -86,7 +86,8 @@ export function TagCleanupWizard({ isOpen, onClose, accountId }: TagCleanupWizar
   const changes = proposals.filter((p) => p.action !== "keep").length;
 
   return (
-    <Modal isOpen={isOpen} onClose={close} title="Tidy up tags">
+    <Modal isOpen={isOpen} onClose={close} title="Tidy up tags" width="w-[520px]">
+      <div className="p-4">
       {step === "intro" && (
         <div className="space-y-4">
           <p className="text-sm text-text-secondary">
@@ -175,6 +176,7 @@ export function TagCleanupWizard({ isOpen, onClose, accountId }: TagCleanupWizar
           <button onClick={close} className="px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover text-sm font-medium">Done</button>
         </div>
       )}
+      </div>
     </Modal>
   );
 }

@@ -74,7 +74,8 @@ export function SmartTagSetup({ isOpen, onClose, accountId }: SmartTagSetupProps
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={close} title="Smart Tags">
+    <Modal isOpen={isOpen} onClose={close} title="Smart Tags" width="w-[460px]">
+      <div className="p-4">
       {step === "intro" && (
         <div className="space-y-4">
           <p className="text-sm text-text-secondary">
@@ -170,6 +171,7 @@ export function SmartTagSetup({ isOpen, onClose, accountId }: SmartTagSetupProps
           </button>
         </div>
       )}
+      </div>
     </Modal>
   );
 }
