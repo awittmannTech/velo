@@ -19,6 +19,7 @@ function thread(overrides: Partial<TodayThread> = {}): TodayThread {
     lastMessageAt: 1_700_000_000_000,
     isUnread: true,
     isImportant: false,
+    isVip: false,
     ...overrides,
   };
 }

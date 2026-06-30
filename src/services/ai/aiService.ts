@@ -14,6 +14,7 @@ import {
   ASK_INBOX_PROMPT,
   SMART_LABEL_PROMPT,
   EXTRACT_TASK_PROMPT,
+  EXTRACT_ACTION_TASK_PROMPT,
   DAILY_DIGEST_PROMPT,
   INBOX_PROFILE_PROMPT,
   PROPOSE_TAGS_PROMPT,
@@ -238,6 +239,14 @@ export async function extractTaskFromThread(
   const formatted = messages.map(formatMessageForSummary).join("\n---\n");
   const combined = `<email_content>Subject: ${subject}\n\n${formatted}</email_content>`.slice(0, 6000);
   return callAi(EXTRACT_TASK_PROMPT, combined);
+}
+
+/** Like extractTaskFromThread, but returns a task ONLY for non-reply actions. */
+export async function extractActionTaskFromThread(messages: DbMessage[]): Promise<string> {
+  const subject = messages[0]?.subject ?? "No subject";
+  const formatted = messages.map(formatMessageForSummary).join("\n---\n");
+  const combined = `<email_content>Subject: ${subject}\n\n${formatted}</email_content>`.slice(0, 6000);
+  return callAi(EXTRACT_ACTION_TASK_PROMPT, combined);
 }
 
 /**

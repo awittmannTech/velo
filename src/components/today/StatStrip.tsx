@@ -1,52 +1,37 @@
-import { Inbox, MailOpen, CornerUpLeft, Star } from "lucide-react";
 import type { TodayStats } from "@/services/today/digestManager";
 
-export type StatKind = "received" | "unread" | "awaiting" | "important";
+export type StatKind = "received" | "unread" | "awaiting";
 
 interface StatStripProps {
   stats: TodayStats;
-  vipCount: number;
   onStat?: (kind: StatKind) => void;
 }
 
-function Stat({
-  icon,
-  value,
-  label,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  value: number;
-  label: string;
-  onClick?: () => void;
-}) {
-  const base =
-    "flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-bg-secondary/60 border border-border-primary text-left";
-  const body = (
+function Metric({ value, label, onClick }: { value: number; label: string; onClick?: () => void }) {
+  const inner = (
     <>
-      <div className="text-accent">{icon}</div>
-      <div className="leading-tight">
-        <div className="text-lg font-semibold text-text-primary">{value}</div>
-        <div className="text-[11px] uppercase tracking-wide text-text-tertiary">{label}</div>
-      </div>
+      <span className="font-semibold text-text-primary">{value}</span>{" "}
+      <span className="text-text-tertiary">{label}</span>
     </>
   );
   return onClick ? (
-    <button onClick={onClick} className={`${base} hover:border-accent transition-colors`}>
-      {body}
+    <button onClick={onClick} className="hover:text-accent transition-colors">
+      {inner}
     </button>
   ) : (
-    <div className={base}>{body}</div>
+    <span>{inner}</span>
   );
 }
 
-export function StatStrip({ stats, vipCount, onStat }: StatStripProps) {
+/** Thin glance line — no big chip cards; metrics that duplicate sections are dropped. */
+export function StatStrip({ stats, onStat }: StatStripProps) {
   return (
-    <div className="flex flex-wrap gap-3">
-      <Stat icon={<Inbox size={18} />} value={stats.received} label="Received" onClick={onStat && (() => onStat("received"))} />
-      <Stat icon={<MailOpen size={18} />} value={stats.unread} label="Unread" onClick={onStat && (() => onStat("unread"))} />
-      <Stat icon={<CornerUpLeft size={18} />} value={stats.awaitingReply} label="Awaiting you" onClick={onStat && (() => onStat("awaiting"))} />
-      <Stat icon={<Star size={18} />} value={vipCount} label="Important" onClick={onStat && (() => onStat("important"))} />
+    <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-sm text-text-secondary px-1">
+      <Metric value={stats.received} label="received today" onClick={onStat && (() => onStat("received"))} />
+      <span className="text-border-primary">·</span>
+      <Metric value={stats.unread} label="unread" onClick={onStat && (() => onStat("unread"))} />
+      <span className="text-border-primary">·</span>
+      <Metric value={stats.awaitingReply} label="to respond" onClick={onStat && (() => onStat("awaiting"))} />
     </div>
   );
 }

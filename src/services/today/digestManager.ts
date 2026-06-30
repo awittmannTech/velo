@@ -10,7 +10,7 @@ import { getThreadById } from "@/services/db/threads";
 import { getAiCache, setAiCache } from "@/services/db/aiCache";
 import { isAiAvailable } from "@/services/ai/providerManager";
 import { generateDailyDigest, classifyNeedsReply } from "@/services/ai/aiService";
-import { extractTask } from "@/services/ai/taskExtraction";
+import { extractActionableTask } from "@/services/ai/taskExtraction";
 
 // ---------- Types ----------
 
@@ -29,6 +29,8 @@ export interface TodayThread {
   lastMessageAt: number | null;
   isUnread: boolean;
   isImportant: boolean;
+  /** VIP sender or Gmail-important — shown as a ⭐ inline, not a separate panel. */
+  isVip: boolean;
 }
 
 export interface TaskSuggestion {
@@ -61,7 +63,6 @@ export interface TodayDigest {
   needsReply: TodayThread[];
   /** Side info: today's mail that doesn't need a reply (alerts, receipts, automated). */
   fyi: TodayThread[];
-  vip: TodayThread[];
   agenda: AgendaItem[];
   brief: string | null;
   briefError: string | null;
@@ -159,6 +160,7 @@ function toTodayThread(t: DbThread): TodayThread {
     lastMessageAt: t.last_message_at,
     isUnread: t.is_read === 0,
     isImportant: t.is_important === 1,
+    isVip: false,
   };
 }
 
@@ -166,7 +168,7 @@ function toTodayThread(t: DbThread): TodayThread {
 
 const DIGEST_CACHE_THREAD_ID = "__today_digest__";
 const DIGEST_CACHE_TYPE = "daily_digest";
-const SUGGESTION_CACHE_TYPE = "task_suggestion";
+const SUGGESTION_CACHE_TYPE = "action_task";
 
 async function buildBrief(
   accountId: string,
@@ -213,20 +215,25 @@ async function buildSuggestions(
   let error: string | null = null;
   for (const thread of candidates) {
     try {
-      let extracted: { title: string; description: string | null; dueDate: number | null; priority: TaskPriority } | null = null;
+      type Extracted = { title: string; description: string | null; dueDate: number | null; priority: TaskPriority } | null;
+      let extracted: Extracted | undefined;
       if (!forceAi) {
         const cached = await getAiCache(accountId, thread.id, SUGGESTION_CACHE_TYPE);
         if (cached) {
-          try { extracted = JSON.parse(cached); } catch { /* regenerate */ }
+          try {
+            const parsed = JSON.parse(cached) as { v: Extracted };
+            if ("v" in parsed) extracted = parsed.v;
+          } catch { /* regenerate */ }
         }
       }
-      if (!extracted) {
+      if (extracted === undefined) {
         const messages = await getMessagesForThread(accountId, thread.id);
         if (messages.length === 0) continue;
-        const result = await extractTask(thread.id, accountId, messages);
-        extracted = result;
-        await setAiCache(accountId, thread.id, SUGGESTION_CACHE_TYPE, JSON.stringify(result));
+        // Only suggests a to-do for non-reply actions; reply-only threads → null.
+        extracted = await extractActionableTask(messages);
+        await setAiCache(accountId, thread.id, SUGGESTION_CACHE_TYPE, JSON.stringify({ v: extracted }));
       }
+      if (!extracted) continue; // reply-only / nothing actionable
       suggestions.push({
         threadId: thread.id,
         accountId,
@@ -378,12 +385,12 @@ export async function buildTodayDigest(
     (t) => !needsReplyIds.has(t.id) && normalizeEmail(t.fromAddress) !== normalizeEmail(accountEmail),
   );
 
-  // VIP highlights: VIP senders, falling back to Gmail "important".
+  // Mark VIP/important threads inline (⭐) rather than as a separate panel.
   const vipSenders = await getVipSenders(accountId).catch(() => new Set<string>());
-  const vip = threads.filter((t) => {
+  for (const t of threads) {
     const from = normalizeEmail(t.fromAddress);
-    return (from && vipSenders.has(from)) || t.isImportant;
-  });
+    t.isVip = (!!from && vipSenders.has(from)) || t.isImportant;
+  }
 
   const agenda = await buildAgenda(accountId, todayStartMs);
 
@@ -421,7 +428,6 @@ export async function buildTodayDigest(
     threads,
     needsReply,
     fyi,
-    vip,
     agenda,
     brief,
     briefError,

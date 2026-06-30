@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Sun, RefreshCw, Star } from "lucide-react";
+import { Sun, RefreshCw } from "lucide-react";
 import type { TodayDigest, TaskSuggestion } from "@/services/today/digestManager";
 import type { DbTask } from "@/services/db/tasks";
 import { StatStrip, type StatKind } from "./StatStrip";
 import { DayPanel } from "./DayPanel";
-import { ThreadMiniList } from "./ThreadMiniList";
 import { AgendaPanel } from "./AgendaPanel";
 import { TodayTodosPanel } from "./TodayTodosPanel";
 import { TodaySkeleton } from "./TodaySkeleton";
@@ -78,7 +77,6 @@ export function TodayDashboard({
 }: TodayDashboardProps) {
   const aiAvailable = digest?.aiAvailable ?? true;
   const needsReplyRef = useRef<HTMLDivElement>(null);
-  const vipRef = useRef<HTMLDivElement>(null);
 
   // Re-render every 60s so "Updated Xm ago" stays current.
   const [, setTick] = useState(0);
@@ -90,7 +88,6 @@ export function TodayDashboard({
   const handleStat = (kind: StatKind) => {
     if (kind === "received" || kind === "unread") onOpenInbox();
     else if (kind === "awaiting") needsReplyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    else if (kind === "important") vipRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -134,7 +131,6 @@ export function TodayDashboard({
             <>
               <StatStrip
                 stats={digest?.stats ?? { received: 0, unread: 0, awaitingReply: 0 }}
-                vipCount={digest?.vip.length ?? 0}
                 onStat={handleStat}
               />
 
@@ -173,17 +169,6 @@ export function TodayDashboard({
                   />
 
                   <AgendaPanel items={digest?.agenda ?? []} onOpen={onOpenThread} />
-
-                  <div ref={vipRef} className="scroll-mt-4">
-                    <ThreadMiniList
-                      title="VIP & important"
-                      icon={Star}
-                      threads={digest?.vip ?? []}
-                      emptyText="Nothing flagged important today."
-                      onOpen={onOpenThread}
-                      max={6}
-                    />
-                  </div>
                 </div>
               </div>
             </>

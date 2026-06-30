@@ -1,4 +1,4 @@
-import { PenLine, Loader2 } from "lucide-react";
+import { PenLine, Loader2, Star } from "lucide-react";
 import type { TodayThread } from "@/services/today/digestManager";
 
 interface ThreadRowProps {
@@ -19,8 +19,9 @@ export function ThreadRow({ thread, onOpen, compact, onDraftReply, drafting }: T
       >
         {thread.isUnread && <span className={`${compact ? "mt-1" : "mt-1.5"} w-2 h-2 rounded-full bg-accent shrink-0`} />}
         <span className="min-w-0 flex-1">
-          <span className="block text-sm text-text-primary truncate font-medium">
-            {thread.fromName?.trim() || thread.fromAddress || "Unknown"}
+          <span className="flex items-center gap-1.5 text-sm text-text-primary font-medium">
+            {thread.isVip && <Star size={12} className="text-warning fill-warning shrink-0" />}
+            <span className="truncate">{thread.fromName?.trim() || thread.fromAddress || "Unknown"}</span>
           </span>
           <span className="block text-sm text-text-secondary truncate">{thread.subject}</span>
           {!compact && thread.snippet && (
