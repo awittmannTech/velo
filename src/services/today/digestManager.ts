@@ -1,7 +1,7 @@
 import type { DbThread } from "@/services/db/threads";
 import { getInboxThreadsSince } from "@/services/db/threads";
 import { getMessagesForThread } from "@/services/db/messages";
-import { getThreadIdsWithTasks, type TaskPriority } from "@/services/db/tasks";
+import { getThreadIdsWithTasks, getTodayTasks, type TaskPriority, type DbTask } from "@/services/db/tasks";
 import { getDismissedSuggestionThreadIds } from "@/services/db/dismissedSuggestions";
 import { getVipSenders } from "@/services/db/notificationVips";
 import { getCalendarEventsInRange } from "@/services/db/calendarEvents";
@@ -35,6 +35,9 @@ export interface TaskSuggestion {
   threadId: string;
   accountId: string;
   subject: string;
+  /** Sender of the source thread, for "{person} needs you to…" attribution. */
+  fromName: string | null;
+  fromAddress: string | null;
   title: string;
   description: string | null;
   dueDate: number | null;
@@ -61,6 +64,8 @@ export interface TodayDigest {
   briefError: string | null;
   suggestions: TaskSuggestion[];
   suggestionsError: string | null;
+  /** Today's real (accepted/created/due) to-dos. */
+  todayTasks: DbTask[];
 }
 
 // ---------- Pure helpers (unit-tested) ----------
@@ -206,6 +211,8 @@ async function buildSuggestions(
         threadId: thread.id,
         accountId,
         subject: thread.subject,
+        fromName: thread.fromName,
+        fromAddress: thread.fromAddress,
         title: extracted.title,
         description: extracted.description,
         dueDate: extracted.dueDate,
@@ -286,6 +293,9 @@ export async function buildTodayDigest(
 
   const agenda = await buildAgenda(accountId, todayStartMs);
 
+  const dayStartSec = Math.floor(todayStartMs / 1000);
+  const todayTasks = await getTodayTasks(accountId, dayStartSec, dayStartSec + 86400).catch(() => []);
+
   const aiAvailable = await isAiAvailable();
 
   let brief: string | null = null;
@@ -322,5 +332,6 @@ export async function buildTodayDigest(
     briefError,
     suggestions,
     suggestionsError,
+    todayTasks,
   };
 }

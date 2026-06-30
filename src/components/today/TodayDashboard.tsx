@@ -1,10 +1,11 @@
 import { Sun, RefreshCw, CornerUpLeft, Star } from "lucide-react";
 import type { TodayDigest, TaskSuggestion } from "@/services/today/digestManager";
+import type { DbTask } from "@/services/db/tasks";
 import { StatStrip } from "./StatStrip";
 import { DigestBrief } from "./DigestBrief";
 import { ThreadMiniList } from "./ThreadMiniList";
 import { AgendaPanel } from "./AgendaPanel";
-import { TaskSuggestionsPanel } from "./TaskSuggestionsPanel";
+import { TodayTodosPanel } from "./TodayTodosPanel";
 
 interface TodayDashboardProps {
   now: Date;
@@ -12,14 +13,17 @@ interface TodayDashboardProps {
   greetingName: string;
   digest: TodayDigest | null;
   suggestions: TaskSuggestion[];
+  todos: DbTask[];
   loading: boolean;
   refreshing: boolean;
   busyThreadIds: Set<string>;
+  completingIds: Set<string>;
   onRefresh: () => void;
   onOpenThread: (threadId: string) => void;
   onOpenSettings: () => void;
   onAcceptSuggestion: (s: TaskSuggestion) => void;
   onDismissSuggestion: (s: TaskSuggestion) => void;
+  onCompleteTodo: (taskId: string) => void;
   onDraftReply: (threadId: string) => void;
   draftingThreadId: string | null;
 }
@@ -41,14 +45,17 @@ export function TodayDashboard({
   greetingName,
   digest,
   suggestions,
+  todos,
   loading,
   refreshing,
   busyThreadIds,
+  completingIds,
   onRefresh,
   onOpenThread,
   onOpenSettings,
   onAcceptSuggestion,
   onDismissSuggestion,
+  onCompleteTodo,
   onDraftReply,
   draftingThreadId,
 }: TodayDashboardProps) {
@@ -113,18 +120,21 @@ export function TodayDashboard({
 
             {/* Side column */}
             <div className="min-w-0 space-y-5">
-              <AgendaPanel items={digest?.agenda ?? []} onOpen={onOpenThread} />
-
-              <TaskSuggestionsPanel
-                suggestions={suggestions}
-                loading={loading || refreshing}
+              <TodayTodosPanel
                 aiAvailable={aiAvailable}
-                error={digest?.suggestionsError ?? null}
+                loading={loading || refreshing}
+                suggestions={suggestions}
+                todos={todos}
+                suggestionsError={digest?.suggestionsError ?? null}
                 busyThreadIds={busyThreadIds}
+                completingIds={completingIds}
                 onAccept={onAcceptSuggestion}
                 onDismiss={onDismissSuggestion}
-                onOpen={onOpenThread}
+                onCompleteTodo={onCompleteTodo}
+                onOpenThread={onOpenThread}
               />
+
+              <AgendaPanel items={digest?.agenda ?? []} onOpen={onOpenThread} />
 
               <ThreadMiniList
                 title="VIP & important"

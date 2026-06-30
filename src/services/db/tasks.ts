@@ -49,6 +49,29 @@ export async function getTasksForAccount(
   );
 }
 
+/**
+ * Today's real to-dos for the dashboard: incomplete top-level tasks that are
+ * either due today or were created today (covers tasks accepted from email
+ * suggestions). Times are Unix seconds (matching `due_date`/`created_at`).
+ */
+export async function getTodayTasks(
+  accountId: string | null,
+  dayStartSec: number,
+  dayEndSec: number,
+): Promise<DbTask[]> {
+  const db = await getDb();
+  return db.select<DbTask[]>(
+    `SELECT * FROM tasks
+     WHERE (account_id = $1 OR account_id IS NULL) AND parent_id IS NULL AND is_completed = 0
+       AND ( (due_date IS NOT NULL AND due_date >= $2 AND due_date < $3) OR created_at >= $2 )
+     ORDER BY
+       CASE WHEN due_date IS NULL THEN 1 ELSE 0 END,
+       due_date ASC,
+       created_at DESC`,
+    [accountId, dayStartSec, dayEndSec],
+  );
+}
+
 export async function getTaskById(id: string): Promise<DbTask | null> {
   const db = await getDb();
   const rows = await db.select<DbTask[]>(

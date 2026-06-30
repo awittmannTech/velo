@@ -121,6 +121,7 @@ You are given a list of today's email threads (sender, subject, and a short snip
 
 Rules:
 - Write 2-4 short sentences (or up to 4 brief bullet points) summarizing the day at a glance.
+- ATTRIBUTE actions to the PERSON who sent the email, by name — e.g. "Sarah needs your sign-off on the renewal" or "Jane (CEO) wants the board deck reviewed today". Use the sender's name from the list, not the company.
 - Lead with what needs the user's attention or action; group the rest (FYI, newsletters, receipts) briefly.
 - Be specific and reference real senders/subjects; do not invent anything not present in the list.
 - Be concise and skimmable. No greeting, no sign-off, no preamble like "Here is your brief".

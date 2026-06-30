@@ -3,12 +3,28 @@ import { useAccountStore } from "@/stores/accountStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useComposerStore } from "@/stores/composerStore";
 import { navigateToLabel, navigateToSettings } from "@/router/navigate";
-import { insertTask, getIncompleteTaskCount } from "@/services/db/tasks";
+import {
+  insertTask,
+  getIncompleteTaskCount,
+  getTodayTasks,
+  completeTask,
+  type DbTask,
+} from "@/services/db/tasks";
 import { getMessagesForThread } from "@/services/db/messages";
 import { dismissTaskSuggestion } from "@/services/db/dismissedSuggestions";
 import { generateAutoDraft } from "@/services/ai/writingStyleService";
-import { buildTodayDigest, type TodayDigest, type TaskSuggestion } from "@/services/today/digestManager";
+import {
+  buildTodayDigest,
+  getTodayStartMs,
+  type TodayDigest,
+  type TaskSuggestion,
+} from "@/services/today/digestManager";
 import { TodayDashboard } from "./TodayDashboard";
+
+function todayRangeSec(): [number, number] {
+  const start = Math.floor(getTodayStartMs(new Date()) / 1000);
+  return [start, start + 86400];
+}
 
 /** Convert a plain-text AI draft into safe paragraph HTML for the composer. */
 function draftToHtml(text: string): string {
@@ -30,9 +46,11 @@ export function TodayPage() {
 
   const [digest, setDigest] = useState<TodayDigest | null>(null);
   const [suggestions, setSuggestions] = useState<TaskSuggestion[]>([]);
+  const [todos, setTodos] = useState<DbTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyThreadIds, setBusyThreadIds] = useState<Set<string>>(new Set());
+  const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
   const [draftingThreadId, setDraftingThreadId] = useState<string | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -52,6 +70,7 @@ export function TodayPage() {
         const result = await buildTodayDigest(accountId, accountEmail, { forceAi });
         setDigest(result);
         setSuggestions(result.suggestions);
+        setTodos(result.todayTasks);
       } catch (err) {
         console.error("[Velo] Today digest failed:", err);
       } finally {
@@ -100,7 +119,10 @@ export function TodayPage() {
       });
       const count = await getIncompleteTaskCount(s.accountId);
       useTaskStore.getState().setIncompleteCount(count);
+      // Remove the candidate and pull the new task into today's real to-dos.
       setSuggestions((prev) => prev.filter((x) => x.threadId !== s.threadId));
+      const [start, end] = todayRangeSec();
+      setTodos(await getTodayTasks(s.accountId, start, end));
     } catch (err) {
       console.error("[Velo] Accept task suggestion failed:", err);
     } finally {
@@ -111,6 +133,29 @@ export function TodayPage() {
       });
     }
   }, []);
+
+  const handleCompleteTodo = useCallback(
+    async (taskId: string) => {
+      setCompletingIds((prev) => new Set(prev).add(taskId));
+      try {
+        await completeTask(taskId);
+        setTodos((prev) => prev.filter((t) => t.id !== taskId));
+        if (accountId) {
+          const count = await getIncompleteTaskCount(accountId);
+          useTaskStore.getState().setIncompleteCount(count);
+        }
+      } catch (err) {
+        console.error("[Velo] Complete to-do failed:", err);
+      } finally {
+        setCompletingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
+      }
+    },
+    [accountId],
+  );
 
   const handleDismiss = useCallback(async (s: TaskSuggestion) => {
     setSuggestions((prev) => prev.filter((x) => x.threadId !== s.threadId));
@@ -162,14 +207,17 @@ export function TodayPage() {
       greetingName={accountEmail ? accountEmail.split("@")[0]! : ""}
       digest={digest}
       suggestions={suggestions}
+      todos={todos}
       loading={loading}
       refreshing={refreshing}
       busyThreadIds={busyThreadIds}
+      completingIds={completingIds}
       onRefresh={() => load(true)}
       onOpenThread={openThread}
       onOpenSettings={() => navigateToSettings("ai")}
       onAcceptSuggestion={handleAccept}
       onDismissSuggestion={handleDismiss}
+      onCompleteTodo={handleCompleteTodo}
       onDraftReply={handleDraftReply}
       draftingThreadId={draftingThreadId}
     />
