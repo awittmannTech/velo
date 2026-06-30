@@ -775,6 +775,18 @@ const MIGRATIONS = [
     description: "Accept self-signed certificates for IMAP/SMTP",
     sql: `ALTER TABLE accounts ADD COLUMN accept_invalid_certs INTEGER DEFAULT 0;`,
   },
+  {
+    version: 24,
+    description: "Track dismissed Today-dashboard task suggestions so they don't reappear",
+    sql: `
+      CREATE TABLE IF NOT EXISTS dismissed_task_suggestions (
+        account_id TEXT NOT NULL,
+        thread_id TEXT NOT NULL,
+        dismissed_at INTEGER DEFAULT (unixepoch()),
+        PRIMARY KEY (account_id, thread_id)
+      );
+    `,
+  },
 ];
 
 /**

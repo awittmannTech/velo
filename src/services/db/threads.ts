@@ -49,6 +49,31 @@ export async function getThreadsForAccount(
   );
 }
 
+/**
+ * Inbox threads with activity at or after `sinceMs` (Unix milliseconds, matching
+ * `last_message_at`). Used by the Today dashboard to gather the day's mail.
+ * Muted threads are excluded.
+ */
+export async function getInboxThreadsSince(
+  accountId: string,
+  sinceMs: number,
+  limit = 100,
+): Promise<DbThread[]> {
+  const db = await getDb();
+  return db.select<DbThread[]>(
+    `SELECT t.*, m.from_name, m.from_address FROM threads t
+     INNER JOIN thread_labels tl ON tl.account_id = t.account_id AND tl.thread_id = t.id
+     LEFT JOIN messages m ON m.account_id = t.account_id AND m.thread_id = t.id
+       AND m.date = (SELECT MAX(m2.date) FROM messages m2 WHERE m2.account_id = t.account_id AND m2.thread_id = t.id)
+     WHERE t.account_id = $1 AND tl.label_id = 'INBOX'
+       AND t.is_muted = 0 AND t.last_message_at >= $2
+     GROUP BY t.account_id, t.id
+     ORDER BY t.last_message_at DESC
+     LIMIT $3`,
+    [accountId, sinceMs, limit],
+  );
+}
+
 export async function getThreadsForCategory(
   accountId: string,
   category: string,

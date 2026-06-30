@@ -13,6 +13,7 @@ const SettingsPage = lazy(() => import("@/components/settings/SettingsPage").the
 const HelpPage = lazy(() => import("@/components/help/HelpPage").then((m) => ({ default: m.HelpPage })));
 const CalendarPage = lazy(() => import("@/components/calendar/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const TasksPage = lazy(() => import("@/components/tasks/TasksPage").then((m) => ({ default: m.TasksPage })));
+const TodayPage = lazy(() => import("@/components/today/TodayPage").then((m) => ({ default: m.TodayPage })));
 const AttachmentLibrary = lazy(() => import("@/components/attachments/AttachmentLibrary").then((m) => ({ default: m.AttachmentLibrary })));
 
 // ---------- Search param validation ----------
@@ -180,6 +181,23 @@ export const tasksRoute = createRoute({
   component: TasksPageWrapper,
 });
 
+// ---------- /today ----------
+function TodayPageWrapper() {
+  return (
+    <ErrorBoundary name="TodayPage">
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center text-text-tertiary text-sm">Loading today...</div>}>
+        <TodayPage />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+export const todayRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "today",
+  component: TodayPageWrapper,
+});
+
 // ---------- /calendar ----------
 export const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -213,6 +231,7 @@ export const routeTree = rootRoute.addChildren([
   settingsTabRoute,
   attachmentsRoute,
   tasksRoute,
+  todayRoute,
   calendarRoute,
   helpIndexRoute,
   helpTopicRoute,

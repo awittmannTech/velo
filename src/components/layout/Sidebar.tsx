@@ -12,6 +12,7 @@ import { useSmartFolderStore } from "@/stores/smartFolderStore";
 import { useActiveLabel, useActiveCategory } from "@/hooks/useRouteNavigation";
 import { navigateToLabel } from "@/router/navigate";
 import {
+  Sun,
   Inbox,
   Star,
   Clock,
@@ -50,6 +51,7 @@ interface SidebarProps {
 }
 
 export const ALL_NAV_ITEMS: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: "today", label: "Today", icon: Sun },
   { id: "inbox", label: "Inbox", icon: Inbox },
   { id: "starred", label: "Starred", icon: Star },
   { id: "snoozed", label: "Snoozed", icon: Clock },

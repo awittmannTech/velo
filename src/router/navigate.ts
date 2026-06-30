@@ -18,6 +18,11 @@ export function navigateToLabel(
     return;
   }
 
+  if (label === "today") {
+    router.navigate({ to: "/today" });
+    return;
+  }
+
   if (label === "tasks") {
     router.navigate({ to: "/tasks" });
     return;
@@ -211,6 +216,9 @@ export function getActiveLabel(): string {
     }
     if (match.routeId === "/attachments") {
       return "attachments";
+    }
+    if (match.routeId === "/today") {
+      return "today";
     }
     if (match.routeId === "/tasks") {
       return "tasks";

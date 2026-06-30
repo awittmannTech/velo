@@ -14,6 +14,7 @@ import {
   ASK_INBOX_PROMPT,
   SMART_LABEL_PROMPT,
   EXTRACT_TASK_PROMPT,
+  DAILY_DIGEST_PROMPT,
 } from "./prompts";
 
 async function callAi(systemPrompt: string, userContent: string): Promise<string> {
@@ -233,6 +234,24 @@ export async function extractTaskFromThread(
   const formatted = messages.map(formatMessageForSummary).join("\n---\n");
   const combined = `<email_content>Subject: ${subject}\n\n${formatted}</email_content>`.slice(0, 6000);
   return callAi(EXTRACT_TASK_PROMPT, combined);
+}
+
+/**
+ * Generate a short narrative "morning brief" from a compact list of today's
+ * threads. Caching/staleness is handled by the caller (digestManager), so this
+ * always calls the model.
+ */
+export async function generateDailyDigest(
+  threads: { fromName: string | null; fromAddress: string | null; subject: string; snippet: string }[],
+): Promise<string> {
+  const lines = threads
+    .map((t) => {
+      const from = t.fromName?.trim() || t.fromAddress || "Unknown";
+      return `From: ${from} | Subject: ${t.subject} | ${t.snippet}`;
+    })
+    .join("\n");
+  const userContent = `<email_content>${lines}</email_content>`.slice(0, 8000);
+  return callAi(DAILY_DIGEST_PROMPT, userContent);
 }
 
 export async function testConnection(): Promise<boolean> {

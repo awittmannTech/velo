@@ -70,6 +70,21 @@ export async function getTasksForThread(
   );
 }
 
+/**
+ * Set of thread IDs (for an account) that already have at least one task linked.
+ * Used by the Today dashboard to avoid suggesting tasks for threads already handled.
+ */
+export async function getThreadIdsWithTasks(
+  accountId: string,
+): Promise<Set<string>> {
+  const db = await getDb();
+  const rows = await db.select<{ thread_id: string }[]>(
+    "SELECT DISTINCT thread_id FROM tasks WHERE thread_account_id = $1 AND thread_id IS NOT NULL",
+    [accountId],
+  );
+  return new Set(rows.map((r) => r.thread_id));
+}
+
 export async function getSubtasks(parentId: string): Promise<DbTask[]> {
   const db = await getDb();
   return db.select<DbTask[]>(
