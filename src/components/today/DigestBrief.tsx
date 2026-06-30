@@ -1,5 +1,4 @@
 import { Sparkles, Loader2, AlertCircle, Settings2 } from "lucide-react";
-import { navigateToSettings } from "@/router/navigate";
 
 interface DigestBriefProps {
   brief: string | null;
@@ -7,9 +6,10 @@ interface DigestBriefProps {
   loading: boolean;
   aiAvailable: boolean;
   hasThreads: boolean;
+  onOpenSettings: () => void;
 }
 
-export function DigestBrief({ brief, error, loading, aiAvailable, hasThreads }: DigestBriefProps) {
+export function DigestBrief({ brief, error, loading, aiAvailable, hasThreads, onOpenSettings }: DigestBriefProps) {
   return (
     <section className="rounded-2xl border border-border-primary bg-bg-secondary/40 p-5">
       <div className="flex items-center gap-2 mb-3">
@@ -22,7 +22,7 @@ export function DigestBrief({ brief, error, loading, aiAvailable, hasThreads }: 
           <Settings2 size={15} className="mt-0.5 shrink-0 text-text-tertiary" />
           <p>
             Enable an AI provider in{" "}
-            <button onClick={() => navigateToSettings("ai")} className="text-accent hover:underline">
+            <button onClick={onOpenSettings} className="text-accent hover:underline">
               Settings &rsaquo; AI
             </button>{" "}
             to get a written brief of your day and task suggestions.
