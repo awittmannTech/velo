@@ -154,6 +154,33 @@ export class GmailClient {
     return this.request("/labels");
   }
 
+  /** Single label WITH totals (messagesTotal/threadsTotal) — labels.list omits these. */
+  async getLabel(labelId: string): Promise<GmailLabel> {
+    return this.request(`/labels/${labelId}`);
+  }
+
+  async listMessages(params: {
+    labelIds?: string[];
+    q?: string;
+    maxResults?: number;
+    pageToken?: string;
+  }): Promise<{ messages?: { id: string; threadId: string }[]; nextPageToken?: string }> {
+    const searchParams = new URLSearchParams();
+    if (params.labelIds) searchParams.set("labelIds", params.labelIds.join(","));
+    if (params.q) searchParams.set("q", params.q);
+    searchParams.set("maxResults", String(params.maxResults ?? 500));
+    if (params.pageToken) searchParams.set("pageToken", params.pageToken);
+    return this.request(`/messages?${searchParams.toString()}`);
+  }
+
+  /** Add/remove labels on up to 1000 messages in one call. */
+  async batchModifyMessages(ids: string[], addLabelIds?: string[], removeLabelIds?: string[]): Promise<void> {
+    await this.request("/messages/batchModify", {
+      method: "POST",
+      body: JSON.stringify({ ids, addLabelIds, removeLabelIds }),
+    });
+  }
+
   async listThreads(params: {
     labelIds?: string[];
     maxResults?: number;

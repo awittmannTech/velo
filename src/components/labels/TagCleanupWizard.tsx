@@ -21,7 +21,7 @@ const ACTION_LABEL: Record<MergeAction, string> = { keep: "Keep", merge: "Merge"
 export function TagCleanupWizard({ isOpen, onClose, accountId }: TagCleanupWizardProps) {
   const [step, setStep] = useState<Step>("intro");
   const [proposals, setProposals] = useState<TagMergeProposal[]>([]);
-  const [result, setResult] = useState({ merged: 0, deleted: 0 });
+  const [result, setResult] = useState({ merged: 0, deleted: 0, serverErrors: 0 });
   const [error, setError] = useState<string | null>(null);
 
   const analyze = async () => {
@@ -92,7 +92,8 @@ export function TagCleanupWizard({ isOpen, onClose, accountId }: TagCleanupWizar
         <div className="space-y-4">
           <p className="text-sm text-text-secondary">
             Velo will review your existing tags and suggest which to <strong>keep</strong>, <strong>merge</strong> into
-            another, or <strong>delete</strong> — so you end up with a clean, useful set. You approve the plan before anything changes.
+            another, or <strong>delete</strong> — so you end up with a clean, useful set. You approve the plan before anything
+            changes, and changes are applied to your account (Gmail), not just locally.
           </p>
           {error && <p className="text-sm text-danger">{error}</p>}
           <button onClick={analyze} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover text-sm font-medium">
@@ -173,6 +174,11 @@ export function TagCleanupWizard({ isOpen, onClose, accountId }: TagCleanupWizar
             <Check size={18} className="text-success" />
             Merged {result.merged} and deleted {result.deleted} tag{result.deleted === 1 ? "" : "s"}.
           </div>
+          {result.serverErrors > 0 && (
+            <p className="text-xs text-warning">
+              {result.serverErrors} change{result.serverErrors === 1 ? "" : "s"} couldn't be applied to your account and were skipped.
+            </p>
+          )}
           <button onClick={close} className="px-4 py-2 rounded-lg bg-accent text-white hover:bg-accent-hover text-sm font-medium">Done</button>
         </div>
       )}
