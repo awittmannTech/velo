@@ -15,6 +15,7 @@ const CalendarPage = lazy(() => import("@/components/calendar/CalendarPage").the
 const TasksPage = lazy(() => import("@/components/tasks/TasksPage").then((m) => ({ default: m.TasksPage })));
 const TodayPage = lazy(() => import("@/components/today/TodayPage").then((m) => ({ default: m.TodayPage })));
 const CleanupPage = lazy(() => import("@/components/cleanup/CleanupPage").then((m) => ({ default: m.CleanupPage })));
+const BackupPage = lazy(() => import("@/components/backup/BackupPage").then((m) => ({ default: m.BackupPage })));
 const AttachmentLibrary = lazy(() => import("@/components/attachments/AttachmentLibrary").then((m) => ({ default: m.AttachmentLibrary })));
 
 // ---------- Search param validation ----------
@@ -216,6 +217,23 @@ export const cleanupRoute = createRoute({
   component: CleanupPageWrapper,
 });
 
+// ---------- /backup ----------
+function BackupPageWrapper() {
+  return (
+    <ErrorBoundary name="BackupPage">
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center text-text-tertiary text-sm">Loading backup...</div>}>
+        <BackupPage />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+export const backupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "backup",
+  component: BackupPageWrapper,
+});
+
 // ---------- /calendar ----------
 export const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -251,6 +269,7 @@ export const routeTree = rootRoute.addChildren([
   tasksRoute,
   todayRoute,
   cleanupRoute,
+  backupRoute,
   calendarRoute,
   helpIndexRoute,
   helpTopicRoute,

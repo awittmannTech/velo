@@ -40,6 +40,9 @@ export function useActiveLabel(): string {
     if (match.routeId === "/cleanup") {
       return "cleanup";
     }
+    if (match.routeId === "/backup") {
+      return "backup";
+    }
     if (match.routeId === "/attachments") {
       return "attachments";
     }
